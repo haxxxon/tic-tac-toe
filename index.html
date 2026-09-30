@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<title>Graph Paper Tic-Tac-Toe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shantell+Sans:wght@400;600;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one notebook sheet, centered; status above, board in the middle, tally and controls below */
+:root {
+  --paper: #f3f6f2;
+  --grid: #d3e0dc;
+  --ink: #1f3a6b;
+  --ink-soft: #5b6f91;
+  --pencil: #c2412d;
+  --line: #9fb3c8;
+  --chip: #e4ebe8;
+  --font-hand: "Shantell Sans", "Comic Sans MS", "Segoe Print", cursive;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14201f; --grid: #1f302e; --ink: #b9cdf5; --ink-soft: #8295b5;
+    --pencil: #ff8a70; --line: #3b5268; --chip: #1c2b2a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #14201f; --grid: #1f302e; --ink: #b9cdf5; --ink-soft: #8295b5;
+  --pencil: #ff8a70; --line: #3b5268; --chip: #1c2b2a; color-scheme: dark;
+}
+html, body { min-height: 100%; }
+body {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  padding: 0 16px;
+}
+.sheet {
+  max-width: 440px; margin: 0 auto; padding-block: 32px 40px;
+  display: flex; flex-direction: column; gap: 22px;
+}
+header { display: flex; flex-direction: column; gap: 4px; }
+h1 {
+  font-family: var(--font-hand); font-weight: 800; font-size: 2rem; line-height: 1.1;
+  margin: 0; text-wrap: balance; letter-spacing: -0.01em;
+}
+.status {
+  font-family: var(--font-hand); font-size: 1.25rem; min-height: 1.6em; margin: 0;
+  color: var(--ink-soft);
+}
+.status strong { color: var(--ink); }
+.status.win strong { color: var(--pencil); }
+
+.board-wrap { position: relative; width: 100%; max-width: 100%; aspect-ratio: 1; }
+.grid-lines, .win-line { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.grid-lines path { stroke: var(--ink); stroke-width: 3.5; fill: none; stroke-linecap: round; }
+.board {
+  position: absolute; inset: 0; display: grid;
+  grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+}
+.cell {
+  appearance: none; background: transparent; border: 0; padding: 14%; margin: 0;
+  cursor: pointer; border-radius: 12px; color: var(--ink);
+}
+.cell:disabled { cursor: default; }
+.cell:not(:disabled):hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.cell:focus-visible { outline: 3px dashed var(--pencil); outline-offset: -8px; }
+.cell svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.mark { fill: none; stroke: currentColor; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .28s ease-out forwards; }
+.mark.second { animation-delay: .16s; }
+.cell.o { color: var(--pencil); }
+.board.done .cell:not(.hit) svg { opacity: .35; transition: opacity .3s; }
+.win-line path { fill: none; stroke: var(--pencil); stroke-width: 7; stroke-linecap: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1; opacity: .9; }
+.win-line.show path { animation: draw .4s .15s ease-out forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.tally { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tally div { display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px; border-bottom: 2px solid var(--line); }
+.tally span { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
+.tally b { font-family: var(--font-hand); font-size: 1.9rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tally .o b { color: var(--pencil); }
+
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.row > label { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); min-width: 5.5em; }
+.seg { display: inline-flex; background: var(--chip); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button {
+  appearance: none; border: 0; background: transparent; color: var(--ink-soft);
+  font: 600 .95rem var(--font-body); padding: 7px 14px; border-radius: 999px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 25%, transparent); }
+.seg button:focus-visible, .actions button:focus-visible { outline: 2px solid var(--pencil); outline-offset: 2px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.actions button {
+  appearance: none; font: 700 1rem var(--font-body); cursor: pointer; border-radius: 10px;
+  padding: 11px 18px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper);
+}
+.actions button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.row[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .mark, .win-line.show path { animation: none; stroke-dashoffset: 0; }
+}
+</style>
+
+</head>
+<body>
+<main class="sheet">
+  <header>
+    <h1>Tic-Tac-Toe</h1>
+    <p class="status" id="status" aria-live="polite"></p>
+  </header>
+
+  <div class="board-wrap">
+    <svg class="grid-lines" viewBox="0 0 300 300" aria-hidden="true">
+      <path d="M101 8 C 99 90, 103 200, 100 292" />
+      <path d="M200 10 C 202 100, 198 210, 201 290" />
+      <path d="M8 100 C 90 102, 210 97, 292 101" />
+      <path d="M10 199 C 100 197, 200 203, 290 200" />
+    </svg>
+    <div class="board" id="board" role="grid" aria-label="Game board"></div>
+    <svg class="win-line" id="winLine" viewBox="0 0 300 300" aria-hidden="true"><path pathLength="1" d="" /></svg>
+  </div>
+
+  <section class="tally" aria-label="Score">
+    <div><span id="xLabel">You (X)</span><b id="scoreX">0</b></div>
+    <div><span>Draws</span><b id="scoreD">0</b></div>
+    <div class="o"><span id="oLabel">Computer (O)</span><b id="scoreO">0</b></div>
+  </section>
+
+  <section class="controls">
+    <div class="row">
+      <label id="modeLbl">Opponent</label>
+      <div class="seg" role="group" aria-labelledby="modeLbl">
+        <button type="button" id="modeCpu" data-mode="cpu">Computer</button>
+        <button type="button" id="modePvp" data-mode="pvp">Friend</button>
+      </div>
+    </div>
+    <div class="row" id="diffRow">
+      <label id="diffLbl">Difficulty</label>
+      <div class="seg" role="group" aria-labelledby="diffLbl">
+        <button type="button" id="diffEasy" data-diff="easy">Easy</button>
+        <button type="button" id="diffMed" data-diff="medium">Medium</button>
+        <button type="button" id="diffHard" data-diff="hard">Unbeatable</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" id="newRound">New round</button>
+      <button type="button" class="ghost" id="resetScores">Reset scores</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const $ = (id) => document.getElementById(id);
+  const boardEl = $("board"), statusEl = $("status"), winLine = $("winLine");
+  let S, cpuTimer = null;
+
+  function fresh(prev) {
+    return {
+      board: Array(9).fill(null), turn: "X", starter: "X", over: false, winLine: null,
+      mode: prev?.mode || "cpu", diff: prev?.diff || "medium",
+      scores: prev?.scores || { X: 0, O: 0, D: 0 },
+    };
+  }
+
+  function winner(b) {
+    for (const l of LINES) {
+      const [a, c, d] = l;
+      if (b[a] && b[a] === b[c] && b[a] === b[d]) return { who: b[a], line: l };
+    }
+    return b.every(Boolean) ? { who: "D", line: null } : null;
+  }
+
+  function minimax(b, player, depth) {
+    const w = winner(b);
+    if (w) return { score: w.who === "O" ? 10 - depth : w.who === "X" ? depth - 10 : 0 };
+    let best = { score: player === "O" ? -Infinity : Infinity, move: -1 };
+    for (let i = 0; i < 9; i++) {
+      if (b[i]) continue;
+      b[i] = player;
+      const r = minimax(b, player === "O" ? "X" : "O", depth + 1);
+      b[i] = null;
+      if (player === "O" ? r.score > best.score : r.score < best.score) best = { score: r.score, move: i };
+    }
+    return best;
+  }
+
+  function cpuMove() {
+    const empty = S.board.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
+    const smartChance = { easy: 0.2, medium: 0.7, hard: 1 }[S.diff];
+    if (Math.random() < smartChance) return minimax(S.board.slice(), "O", 0).move;
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  function markSVG(p) {
+    return p === "X"
+      ? '<svg viewBox="0 0 100 100" aria-hidden="true"><path class="mark" pathLength="1" d="M18 16 C 40 42, 60 60, 84 86"/><path class="mark second" pathLength="1" d="M83 15 C 60 40, 40 62, 16 85"/></svg>'
+      : '<svg viewBox="0 0 100 100" aria-hidden="true"><path class="mark" pathLength="1" d="M52 12 C 78 12, 90 32, 88 52 C 86 76, 66 90, 46 88 C 24 86, 11 68, 13 48 C 15 28, 30 14, 55 16"/></svg>';
+  }
+
+  function play(i) {
+    if (S.over || S.board[i]) return;
+    S.board[i] = S.turn;
+    const w = winner(S.board);
+    if (w) {
+      S.over = true; S.winLine = w.line; S.scores[w.who]++;
+    } else {
+      S.turn = S.turn === "X" ? "O" : "X";
+    }
+    render(i);
+    maybeCpu();
+  }
+
+  function maybeCpu() {
+    clearTimeout(cpuTimer);
+    if (S.mode === "cpu" && S.turn === "O" && !S.over) {
+      render();
+      cpuTimer = setTimeout(() => play(cpuMove()), 450);
+    }
+  }
+
+  function newRound() {
+    clearTimeout(cpuTimer);
+    const starter = S.starter === "X" ? "O" : "X";
+    S.board = Array(9).fill(null); S.over = false; S.winLine = null;
+    S.starter = starter; S.turn = starter;
+    render(); maybeCpu();
+  }
+
+  function names() {
+    return S.mode === "cpu" ? { X: "You", O: "Computer" } : { X: "Player X", O: "Player O" };
+  }
+
+  function drawWinLine() {
+    const path = winLine.querySelector("path");
+    if (!S.winLine) { winLine.classList.remove("show"); path.setAttribute("d", ""); return; }
+    const c = (i) => [50 + (i % 3) * 100, 50 + Math.floor(i / 3) * 100];
+    const [a, , b] = S.winLine, [x1, y1] = c(a), [x2, y2] = c(b);
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ext = 34;
+    const sx = x1 - (dx / len) * ext, sy = y1 - (dy / len) * ext;
+    const ex = x2 + (dx / len) * ext, ey = y2 + (dy / len) * ext;
+    path.setAttribute("d", `M${sx} ${sy} Q ${(sx + ex) / 2 + 3} ${(sy + ey) / 2 - 4} ${ex} ${ey}`);
+    winLine.classList.remove("show"); void winLine.getBoundingClientRect(); winLine.classList.add("show");
+  }
+
+  function render(justPlayed) {
+    const n = names();
+    const cpuThinking = S.mode === "cpu" && S.turn === "O" && !S.over;
+    if (boardEl.children.length !== 9) {
+      boardEl.innerHTML = "";
+      for (let i = 0; i < 9; i++) {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "cell"; b.id = "cell" + i;
+        b.addEventListener("click", () => { if (!(S.mode === "cpu" && S.turn === "O")) play(i); });
+        boardEl.appendChild(b);
+      }
+    }
+    [...boardEl.children].forEach((b, i) => {
+      const v = S.board[i];
+      const want = v || "";
+      if (b.dataset.v !== want || justPlayed === undefined && !v) {
+        b.innerHTML = v ? markSVG(v) : "";
+        b.dataset.v = want;
+      }
+      b.className = "cell" + (v === "O" ? " o" : "") + (S.winLine && S.winLine.includes(i) ? " hit" : "");
+      b.disabled = !!v || S.over || cpuThinking;
+      const row = Math.floor(i / 3) + 1, col = (i % 3) + 1;
+      b.setAttribute("aria-label", `Row ${row}, column ${col}: ${v || "empty"}`);
+    });
+    boardEl.classList.toggle("done", S.over);
+
+    const w = S.over ? winner(S.board) : null;
+    statusEl.classList.toggle("win", !!(w && w.who !== "D"));
+    if (w && w.who === "D") statusEl.innerHTML = "<strong>Draw.</strong> Nobody got three in a row.";
+    else if (w) statusEl.innerHTML = w.who === "X" && S.mode === "cpu"
+      ? "<strong>You win!</strong> Three in a row."
+      : `<strong>${n[w.who]} wins!</strong> Three in a row.`;
+    else if (cpuThinking) statusEl.innerHTML = "Computer is thinking…";
+    else statusEl.innerHTML = S.mode === "cpu"
+      ? "Your move. You're <strong>X</strong>."
+      : `<strong>${n[S.turn]}</strong> to move.`;
+
+    drawWinLine();
+    $("scoreX").textContent = S.scores.X;
+    $("scoreO").textContent = S.scores.O;
+    $("scoreD").textContent = S.scores.D;
+    $("xLabel").textContent = `${n.X} (X)`;
+    $("oLabel").textContent = `${n.O} (O)`;
+    document.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === S.mode));
+    document.querySelectorAll("[data-diff]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.diff === S.diff));
+    $("diffRow").hidden = S.mode !== "cpu";
+  }
+
+  function start(data) {
+    S = data && data.board ? data : fresh();
+    try {
+      const saved = JSON.parse(localStorage.getItem("ttt-prefs") || "{}");
+      if (!(data && data.board)) { if (saved.mode) S.mode = saved.mode; if (saved.diff) S.diff = saved.diff; }
+    } catch (e) {}
+    const savePrefs = () => { try { localStorage.setItem("ttt-prefs", JSON.stringify({ mode: S.mode, diff: S.diff })); } catch (e) {} };
+
+    document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
+      if (S.mode === b.dataset.mode) return;
+      S = fresh({ mode: b.dataset.mode, diff: S.diff }); savePrefs(); render();
+    }));
+    document.querySelectorAll("[data-diff]").forEach((b) => b.addEventListener("click", () => {
+      S.diff = b.dataset.diff; savePrefs(); render();
+    }));
+    $("newRound").addEventListener("click", newRound);
+    $("resetScores").addEventListener("click", () => { S.scores = { X: 0, O: 0, D: 0 }; render(); });
+
+    window.claude?.hot?.snapshot?.(() => S);
+    render(); maybeCpu();
+  }
+
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body>
+</html>
